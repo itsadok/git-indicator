@@ -48,6 +48,11 @@ class GitMonitor(object):
         self.status_item.set_sensitive(False)
         self.menu.append(self.status_item)
 
+        self.refresh_item = gtk.MenuItem("Refresh")
+        self.refresh_item.connect("activate", self.check_git)
+        self.refresh_item.show()
+        self.menu.append(self.refresh_item)
+
         self.quit_item = gtk.MenuItem("Quit")
         self.quit_item.connect("activate", self.quit)
         self.quit_item.show()
@@ -61,7 +66,7 @@ class GitMonitor(object):
     def quit(self, widget):
         sys.exit(0)
 
-    def check_git(self):
+    def check_git(self, widget=None):
         report = scan_git()
         if report:
             self.status_item.set_label("\n".join(report))
