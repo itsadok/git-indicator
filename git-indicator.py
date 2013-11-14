@@ -35,7 +35,7 @@ class GitMonitor(object):
                                            "active",
                                            appindicator.CATEGORY_APPLICATION_STATUS)
         self.ind.set_status(appindicator.STATUS_ACTIVE)
-        self.ind.set_icon_theme_path(os.path.dirname(__file__))
+        self.ind.set_icon_theme_path(os.path.abspath(os.path.dirname(__file__)))
         self.ind.set_attention_icon("attention")
 
         self.menu_setup()
