@@ -24,9 +24,15 @@ def scan_git(fetch):
                 output = check_output(["git", "status", "-b", "--porcelain"], cwd=filename, stderr=STDOUT).split("\n")[:-1]
                 if len(output) > 1:
                     report.append("%s has uncommitted files" % filename)
-                m = re.search(r"\[(ahead \d+, behind \d+|ahead \d+|behind \d+)\]", output[0])
+                m = re.search(r"\[ahead \d+\]", output[0])
                 if m:
-                    report.append("%s needs to push/pull" % filename)
+                    report.append("%s needs to push" % filename)
+                m = re.search(r"\[behind \d+\]", output[0])
+                if m:
+                    report.append("%s needs to pull" % filename)
+                m = re.search(r"\[ahead \d+, behind \d+\]", output[0])
+                if m:
+                    report.append("%s needs to pull&push" % filename)
             except CalledProcessError:
                 report.append("Error checking %s" % filename)
     return report
