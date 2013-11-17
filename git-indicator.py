@@ -71,12 +71,16 @@ class GitMonitor(object):
         self.menu.append(self.quit_item)
 
     def main(self):
-        self.check_git()
+        gtk.timeout_add(50, self.check_git_first)
         gtk.timeout_add(interval * 1000, self.check_git)
         gtk.main()
 
     def quit(self, widget):
         sys.exit(0)
+
+    def check_git_first(self, widget=None):
+        self.check_git()
+        return False
 
     def check_git(self, widget=None):
         report = scan_git(self.fetch)
