@@ -51,16 +51,6 @@ class GitMonitor(object):
         self.report_items = []
         self.action_pids = set()
 
-    def do_add_item(self, widget):
-        print "add item"
-        self.new_items.append(gtk.MenuItem("New item %d" % (len(self.new_items) + 1)))
-        self.new_items[-1].show()
-        self.menu.insert(self.new_items[-1], len(self.new_items) - 1)
-
-    def do_clear_items(self, widget):
-        for item in self.new_items:
-            self.menu.remove(item)
-
     def menu_setup(self):
         self.menu = gtk.Menu()
 
@@ -89,7 +79,6 @@ class GitMonitor(object):
         pid, status = os.wait()
         if pid in self.action_pids:
             self.action_pids.remove(pid)
-            print "refreshing git"
             self.check_git()
 
     def git_action(self, cmd, cwd):
