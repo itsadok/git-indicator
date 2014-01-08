@@ -8,11 +8,37 @@ import appindicator
 import os
 from subprocess import check_output, CalledProcessError, STDOUT, Popen
 
+def get_config(key, default, wrap=None):
+    try:
+        value = check_output(["git", "config", "indicator.%s" % key])
+        if wrap:
+            value = wrap(value)
+        return value
+    except Exception:
+        return default
+
+class Action(object):
+    def __init__(self, command, terminal):
+        self.command = command
+        self.terminal = terminal
+
+def get_config_action(action_name, default_command, default_terminal):
+    command = get_config("actions.%s" % action_name, default_command)
+    terminal = get_config("actions.%s.terminal" % action_name, default_terminal, bool)
+    return Action(command, terminal)
+
 os.environ["LC_ALL"] = "C"
-try:
-    interval = int(check_output(["git", "config", "indicator.interval"]))
-except Exception:
-    interval = 60 # seconds
+interval = get_config("interval", 60, int)
+actions = {
+    "commit": Action("git-cola", terminal=False),
+    "pull": Action("git pull", terminal=True),
+    "push": Action("git push", terminal=True),
+    "sync": Action("git pull", terminal=True)
+}
+
+for action_name in actions:
+    action = actions[action_name]
+    actions[action_name] = get_config_action(action_name, action.command, action.terminal)
 
 def scan_git(fetch):
     report = []
@@ -23,13 +49,13 @@ def scan_git(fetch):
                     check_output(["git", "fetch"], cwd=filename, stderr=STDOUT)
                 output = check_output(["git", "status", "-b", "--porcelain"], cwd=filename, stderr=STDOUT).split("\n")[:-1]
                 if len(output) > 1:
-                    report.append(("%s has uncommitted files" % filename, ["git-cola"], filename))
+                    report.append(("%s has uncommitted files" % filename, "commit", filename))
                 if re.search(r"\[ahead \d+\]", output[0]):
-                    report.append(("%s needs to push" % filename, ["gnome-terminal", "--disable-factory", "-x", "bash" , "-c", """bash --rcfile <(echo 'git push && echo "Press any key to close terminal, interrupt to leave open" && read -n 1 && exit')"""], filename))
+                    report.append(("%s needs to push" % filename, "push", filename))
                 elif re.search(r"\[behind \d+\]", output[0]):
-                    report.append(("%s needs to pull" % filename,  ["gnome-terminal", "--disable-factory", "-x", "bash" , "-c", """bash --rcfile <(echo 'git pull && echo "Press any key to close terminal, interrupt to leave open" && read -n 1 && exit')"""], filename))
+                    report.append(("%s needs to pull" % filename,  "pull", filename))
                 elif re.search(r"\[ahead \d+, behind \d+\]", output[0]):
-                    report.append(("%s needs to pull&push" % filename,  ["gnome-terminal", "--disable-factory", "-x", "bash" , "-c", """bash --rcfile <(echo 'git pull && git push; echo "Press any key to close terminal, interrupt to leave open" && read -n 1 && exit')"""], filename))
+                    report.append(("%s needs to pull&push" % filename,  "sync", filename))
             except CalledProcessError:
                 report.append("Error checking %s" % filename)
     return report
@@ -81,9 +107,14 @@ class GitMonitor(object):
             self.action_pids.remove(pid)
             self.check_git()
 
-    def git_action(self, cmd, cwd):
+    def git_action(self, action_name, cwd):
         def action(widget):
-            pid = Popen(cmd, cwd=cwd).pid
+            if not actions[action_name].terminal:
+                args = [ actions[action_name].command ]
+            else:
+                args = ["gnome-terminal", "--disable-factory", "-x", "bash" , "-c", """bash --rcfile <(echo '%s && echo "Press any key to close terminal, interrupt to leave open" && read -n 1 && exit')""" % actions[action_name].command]
+
+            pid = Popen(args, cwd=cwd).pid
             self.action_pids.add(pid)
         return action
 
@@ -105,11 +136,11 @@ class GitMonitor(object):
         else:
             self.ind.set_status(appindicator.STATUS_ACTIVE)
 
-        for line, cmd, cwd in report:
+        for line, action_name, cwd in report:
             self.report_items.append(gtk.MenuItem(line))
             self.report_items[-1].show()
-            if cmd:
-                self.report_items[-1].connect("activate", self.git_action(cmd, cwd))
+            if action:
+                self.report_items[-1].connect("activate", self.git_action(action_name, cwd))
             self.menu.insert(self.report_items[-1], len(self.report_items) - 1)
         return True
 
