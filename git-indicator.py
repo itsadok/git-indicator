@@ -43,7 +43,7 @@ for action_name in actions:
 def scan_git(fetch):
     report = []
     for filename in os.listdir("."):
-        if os.path.isdir(filename):
+        if not filename.startswith(".") and os.path.isdir(filename):
             try:
                 if fetch:
                     check_output(["git", "fetch"], cwd=filename, stderr=STDOUT)
