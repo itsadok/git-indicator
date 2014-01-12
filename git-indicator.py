@@ -27,6 +27,10 @@ def get_config_action(action_name, default_command, default_terminal):
     terminal = get_config("actions.%s.terminal" % action_name, default_terminal, bool)
     return Action(command, terminal)
 
+# Prevent GTK warnings from appearing in the console
+devnull = open(os.devnull, 'w')
+sys.stderr = devnull
+
 os.environ["LC_ALL"] = "C"
 interval = get_config("interval", 60, int)
 actions = {
