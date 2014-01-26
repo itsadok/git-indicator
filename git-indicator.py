@@ -10,7 +10,7 @@ from subprocess import check_output, CalledProcessError, STDOUT, Popen
 
 def get_config(key, default, wrap=None):
     try:
-        value = check_output(["git", "config", "indicator.%s" % key])
+        value = check_output(["git", "config", "indicator.%s" % key]).strip()
         if wrap:
             value = wrap(value)
         return value
